@@ -57,7 +57,7 @@
         <input type="text" id="ob-ollama-model" value="llama3" autocomplete="off" />
         <small class="hint">Run <code>ollama serve</code> locally first.</small>
       </div>
-      <button class="btn-primary mt-24" onclick="obNext(1)">Continue ?</button>
+      <button class="btn-primary mt-24" onclick="obNext(1)">Continue &rarr;</button>
     </div>
 
     <!-- Step 2 -->
@@ -71,7 +71,7 @@
         <label for="ob-assistant-name">Assistant Name <span class="hint">(default: JARVIS)</span></label>
         <input type="text" id="ob-assistant-name" placeholder="JARVIS" maxlength="32" />
       </div>
-      <button class="btn-primary mt-24" onclick="obNext(2)">Continue ?</button>
+      <button class="btn-primary mt-24" onclick="obNext(2)">Continue &rarr;</button>
     </div>
 
     <!-- Step 3 -->
@@ -79,22 +79,22 @@
       <h3>Step 3 of 3 — Permissions &amp; Privacy</h3>
       <div class="perm-list">
         <div class="perm-item">
-          <span class="perm-icon">??</span>
+          <span class="perm-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg></span>
           <div><strong>Microphone</strong><p>Active only when you click mic button. Always indicated.</p></div>
           <label class="toggle"><input type="checkbox" id="perm-mic" checked /><span></span></label>
         </div>
         <div class="perm-item">
-          <span class="perm-icon">??</span>
-          <div><strong>Camera</strong><p>Active only when you enable it. Live indicator shown.</p></div>
+          <span class="perm-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
+          <div><strong>Camera &amp; Vision</strong><p>Active only when you enable it. Live indicator shown.</p></div>
           <label class="toggle"><input type="checkbox" id="perm-cam" /><span></span></label>
         </div>
         <div class="perm-item">
-          <span class="perm-icon">??</span>
+          <span class="perm-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
           <div><strong>Internet / Cloud AI</strong><p>Cloud calls only when authorized. No silent requests.</p></div>
           <label class="toggle"><input type="checkbox" id="perm-net" checked /><span></span></label>
         </div>
         <div class="perm-item">
-          <span class="perm-icon">??</span>
+          <span class="perm-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24A2.5 2.5 0 0 0 14.5 2Z"/></svg></span>
           <div><strong>Conversation memory</strong><p>Saves summaries locally. You can delete anytime.</p></div>
           <label class="toggle"><input type="checkbox" id="perm-mem" checked /><span></span></label>
         </div>
@@ -103,7 +103,7 @@
         <strong>Privacy:</strong> Your data stays on this device. No analytics. No tracking. No telemetry.
         API keys are held in session memory only and cleared when you close this tab.
       </div>
-      <button class="btn-primary mt-24" onclick="obFinish()">Launch JARVIS ?</button>
+      <button class="btn-primary mt-24" onclick="obFinish()">Launch JARVIS &rarr;</button>
     </div>
   </div>
 </div>
@@ -112,8 +112,10 @@
 <div id="settings-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
   <div class="modal-box settings-box">
     <div class="modal-header">
-      <h2 id="settings-title">? Settings</h2>
-      <button class="close-btn" onclick="closeSettings()" aria-label="Close settings">?</button>
+      <h2 id="settings-title">⚙️ Settings</h2>
+      <button class="close-btn" onclick="closeSettings()" aria-label="Close settings">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
     <div class="settings-tabs">
       <button class="stab active" onclick="switchTab('general')" id="stab-general">General</button>
@@ -162,7 +164,7 @@
       </div>
       <div class="setting-row"><label>Auto-speak responses</label>
         <label class="toggle"><input type="checkbox" id="s-auto-speak" /><span></span></label></div>
-      <button class="btn-secondary mt-16" onclick="testVoice()">? Test Voice</button>
+      <button class="btn-secondary mt-16" onclick="testVoice()">🔊 Test Voice</button>
     </div>
     <!-- AI Tab -->
     <div class="tab-panel" id="panel-ai">
@@ -207,8 +209,8 @@
         <label class="toggle"><input type="checkbox" id="s-mem-enabled" checked /><span></span></label></div>
       <div class="memory-list" id="memory-list-container"><p class="hint">No memories yet.</p></div>
       <div class="btn-row mt-16">
-        <button class="btn-danger" onclick="clearAllMemory()">?? Delete All</button>
-        <button class="btn-secondary" onclick="exportMemory()">? Export JSON</button>
+        <button class="btn-danger" onclick="clearAllMemory()">🗑️ Delete All</button>
+        <button class="btn-secondary" onclick="exportMemory()">📥 Export JSON</button>
       </div>
     </div>
     <!-- Privacy Tab -->
@@ -241,15 +243,17 @@
 <div id="camera-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="cam-title">
   <div class="modal-box camera-box">
     <div class="modal-header">
-      <h2 id="cam-title">?? Visual Analysis</h2>
+      <h2 id="cam-title">👁️ Visual Analysis</h2>
       <div class="cam-live-badge" id="cam-live-badge"><span class="dot-live"></span> LIVE</div>
-      <button class="close-btn" onclick="closeCameraModal()" aria-label="Close camera">?</button>
+      <button class="close-btn" onclick="closeCameraModal()" aria-label="Close camera">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
     <video id="cam-video" autoplay playsinline muted></video>
     <canvas id="cam-canvas" style="display:none"></canvas>
     <div id="cam-preview" class="cam-preview-box" style="display:none">
       <img id="cam-snapshot" alt="Captured frame" />
-      <button class="cam-discard" onclick="discardSnapshot()">? Discard</button>
+      <button class="cam-discard" onclick="discardSnapshot()">✕ Discard</button>
     </div>
     <div class="cam-controls">
       <div class="btn-row">
@@ -287,13 +291,16 @@
     </div>
     <nav class="sidebar-nav">
       <button class="nav-btn active" id="nav-chat" onclick="switchView('chat')" aria-label="Chat">
-        <span class="nav-icon">??</span><span class="nav-label">Chat</span>
+        <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span class="nav-label">Chat</span>
       </button>
       <button class="nav-btn" id="nav-memory" onclick="switchView('memory')" aria-label="Memory">
-        <span class="nav-icon">??</span><span class="nav-label">Memory</span>
+        <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24A2.5 2.5 0 0 0 14.5 2Z"/></svg>
+        <span class="nav-label">Memory</span>
       </button>
       <button class="nav-btn" id="nav-usage" onclick="switchView('usage')" aria-label="Usage">
-        <span class="nav-icon">??</span><span class="nav-label">Usage</span>
+        <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span class="nav-label">Usage</span>
       </button>
     </nav>
     <div class="sidebar-footer">
@@ -307,7 +314,9 @@
           <span id="ai-label">Cloud</span>
         </div>
       </div>
-      <button class="icon-btn" onclick="openSettings()" title="Settings" aria-label="Open settings">?</button>
+      <button class="icon-btn" onclick="openSettings()" title="Settings" aria-label="Open settings">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
     </div>
   </aside>
 
@@ -316,7 +325,9 @@
     <section class="view active" id="view-chat">
       <header class="chat-header">
         <div class="chat-header-left">
-          <button class="icon-btn sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle sidebar">?</button>
+          <button class="icon-btn sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle sidebar" title="Toggle sidebar">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
           <div class="assistant-info">
             <div class="assistant-avatar-sm" id="av-sm">
               <div class="av-ring"></div>
@@ -329,11 +340,13 @@
           </div>
         </div>
         <div class="chat-header-right">
-          <div class="token-pill" id="token-pill" title="Token usage this period">
-            <span class="token-icon">?</span>
-            <span id="token-display">0 / 10K</span>
+          <div class="token-pill" id="token-pill" title="Token usage this period" onclick="openSettings();switchTab('usage')" style="cursor:pointer">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="token-icon"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M15 9.5a3.5 3.5 0 0 0-5 0 3.5 3.5 0 0 0 0 5 3.5 3.5 0 0 0 5 0"/></svg>
+            <span id="token-display">0 / 1M</span>
           </div>
-          <button class="icon-btn" onclick="newChat()" title="New chat" aria-label="New chat">?</button>
+          <button class="icon-btn" onclick="newChat()" title="New chat" aria-label="New chat">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
         </div>
       </header>
 
@@ -342,16 +355,22 @@
       <div id="pending-img-bar" class="pending-img-bar hidden">
         <img id="pending-img-thumb" alt="Pending frame" />
         <span>Frame attached</span>
-        <button onclick="clearPendingImage()" aria-label="Remove image">?</button>
+        <button onclick="clearPendingImage()" aria-label="Remove image">✕</button>
       </div>
 
       <div class="input-area">
         <div class="input-toolbar">
           <button class="tool-btn" id="cam-toggle-btn" onclick="toggleCamera()" title="Camera visual perception" aria-label="Camera">
-            📷
+            📷 Camera
           </button>
           <button class="tool-btn" id="upload-btn" onclick="g('file-upload').click()" title="Attach image file / screenshot" aria-label="Upload Image">
-            🖼️
+            🖼️ Upload
+          </button>
+          <button class="tool-btn" id="gen-img-btn" onclick="promptImageGen()" title="Generate AI Image with FLUX" aria-label="Generate Image">
+            🎨 Gen Image
+          </button>
+          <button class="tool-btn" id="gen-audio-btn" onclick="promptAudioGen()" title="Generate Speech or Sound Effects" aria-label="Generate Audio">
+            🎵 Gen Audio
           </button>
           <input type="file" id="file-upload" accept="image/*" onchange="handleFileUpload(event)" style="display:none" />
           <span id="cam-active-badge" class="cam-badge hidden"><span class="dot-live"></span> Camera On</span>
@@ -387,7 +406,7 @@
     <section class="view" id="view-memory">
       <header class="view-header">
         <div>
-          <h2>?? Memory</h2>
+          <h2>🧠 Memory</h2>
           <p class="hint">Stored locally on this device. You control everything here.</p>
         </div>
         <button class="btn-danger" onclick="clearAllMemory()">Clear All</button>
@@ -399,7 +418,7 @@
 
     <!-- USAGE VIEW -->
     <section class="view" id="view-usage">
-      <header class="view-header"><div><h2>?? Usage Dashboard</h2><p class="hint">Track your AI token consumption and costs.</p></div></header>
+      <header class="view-header"><div><h2>📊 Usage Dashboard</h2><p class="hint">Track your AI token consumption and costs.</p></div></header>
       <div class="usage-view-content" id="usage-view-content"></div>
     </section>
   </main>

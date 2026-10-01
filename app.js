@@ -24,7 +24,7 @@ const State = {
   allowCam:      false,
   allowMic:      true,
   clearOnClose:  false,
-  tokenBudget:   10000,
+  tokenBudget:   1000000,
   budgetPeriod:  "weekly",
   tokensUsed:    0,
   periodStart:   null,
@@ -89,7 +89,8 @@ function loadSettings() {
   State.allowCam      = !!s.allowCam;
   State.allowMic      = s.allowMic !== false;
   State.clearOnClose  = !!s.clearOnClose;
-  State.tokenBudget   = parseInt(s.tokenBudget  || 10000);
+  State.tokenBudget   = parseInt(s.tokenBudget || 1000000);
+  if (State.tokenBudget <= 50000) State.tokenBudget = 1000000;
   State.budgetPeriod  = s.budgetPeriod  || "weekly";
   State.theme         = s.theme         || "dark";
   State.apiKey        = sessionStorage.getItem("j_api_key") || "";
@@ -118,7 +119,7 @@ function saveSettings() {
     allowCam:      g("s-allow-cam").checked,
     allowMic:      g("s-allow-mic").checked,
     clearOnClose:  g("s-clear-on-close").checked,
-    tokenBudget:   parseInt(g("s-token-budget").value) || 10000,
+    tokenBudget:   parseInt(g("s-token-budget").value) || 1000000,
     budgetPeriod:  g("s-budget-period").value,
     theme:         g("s-theme").value,
   };
@@ -269,8 +270,11 @@ async function callAI(messages) {
     return "[LOCAL-ONLY MODE] Cloud AI is disabled. Enable Ollama or turn off local-only mode in Settings > Privacy.";
   }
   if (isOverBudget() && State.provider !== "ollama") {
-    return "[BUDGET EXCEEDED] You have used " + fmtNum(State.tokensUsed) + " / " + fmtNum(State.tokenBudget) +
-           " tokens this " + State.budgetPeriod + ". Increase your budget in Settings > AI & Keys.";
+    // Auto-extend budget so user is never blocked abruptly
+    State.tokenBudget += 1000000;
+    saveTokenState();
+    updateTokenDisplay();
+    toast("Token budget auto-extended (+1M tokens)", "warn");
   }
   try {
     switch (State.provider) {
@@ -446,7 +450,10 @@ function buildSystemPrompt() {
     bullet:   "Use bullet points and structured lists when possible.",
   };
   var style = styleMap[State.responseStyle] || "Be concise.";
-  return "You are " + State.assistantName + ", a personal AI assistant for " + State.userName + ". " + style +
+  return "You are " + State.assistantName + ", a multimodal personal AI assistant for " + State.userName + ". " + style +
+    "\nYou have visual perception, image generation, and audio generation tools." +
+    "\n- When the user asks to generate, draw, or create an image, acknowledge it and include: [GENERATE_IMAGE: detailed descriptive prompt]." +
+    "\n- When the user asks to generate audio, speech, or sound, include: [GENERATE_AUDIO: text or speech to generate]." +
     "\nBe natural, polite and helpful. If you don't know something, say so. Never fabricate facts." +
     "\nCurrent date: " + new Date().toLocaleDateString("en-US", { weekday:"long", year:"numeric", month:"long", day:"numeric" }) + ".";
 }
@@ -457,6 +464,43 @@ async function sendMessage() {
   const text  = input.value.trim();
   if (!text && !State.pendingImageData) return;
   if (State.isThinking) return;
+
+  // 1. Intercept Image Generation commands
+  var lower = text.toLowerCase();
+  if (lower.startsWith("/imagine ") || lower.startsWith("/image ")) {
+    var imgPrompt = text.replace(/^\/(imagine|image)\s+/i, "").trim();
+    input.value = "";
+    autoResize(input);
+    handleDirectImageGen(imgPrompt);
+    return;
+  }
+  if (/^(?:can you\s+)?(?:generate|create|draw|make)\s+(?:an?\s+)?(?:image|picture|photo|illustration|drawing|artwork)(?:\s+(?:of|about|for|showing))?\s+(.+)/i.test(text)) {
+    var im = text.match(/^(?:can you\s+)?(?:generate|create|draw|make)\s+(?:an?\s+)?(?:image|picture|photo|illustration|drawing|artwork)(?:\s+(?:of|about|for|showing))?\s+(.+)/i);
+    if (im && im[1] && im[1].length > 1) {
+      input.value = "";
+      autoResize(input);
+      handleDirectImageGen(im[1].trim());
+      return;
+    }
+  }
+
+  // 2. Intercept Audio Generation commands
+  if (lower.startsWith("/audio ") || lower.startsWith("/sound ")) {
+    var audPrompt = text.replace(/^\/(audio|sound)\s+/i, "").trim();
+    input.value = "";
+    autoResize(input);
+    handleDirectAudioGen(audPrompt);
+    return;
+  }
+  if (/^(?:can you\s+)?(?:generate|create|make|synthesize)\s+(?:an?\s+)?(?:audio|sound|speech|voice)(?:\s+(?:of|saying|for))?\s+(.+)/i.test(text)) {
+    var am = text.match(/^(?:can you\s+)?(?:generate|create|make|synthesize)\s+(?:an?\s+)?(?:audio|sound|speech|voice)(?:\s+(?:of|saying|for))?\s+(.+)/i);
+    if (am && am[1] && am[1].length > 1) {
+      input.value = "";
+      autoResize(input);
+      handleDirectAudioGen(am[1].trim());
+      return;
+    }
+  }
 
   var userMsg = {
     role:      "user",
@@ -543,7 +587,7 @@ function appendSystemMsg(text) {
 }
 
 function renderMarkdown(text) {
-  return text
+  var rendered = text
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/```([\s\S]*?)```/g, "<pre><code>$1</code></pre>")
     .replace(/`([^`]+)`/g, "<code>$1</code>")
@@ -554,6 +598,51 @@ function renderMarkdown(text) {
     .replace(/(<li>.*?<\/li>)+/gs, "<ul>$&</ul>")
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
     .replace(/\n{2,}/g, "<br><br>").replace(/\n/g, "<br>");
+
+  // Render Image Generator Tag: [GENERATE_IMAGE: prompt | url] or [GENERATE_IMAGE: prompt]
+  rendered = rendered.replace(/\[GENERATE_IMAGE:\s*([^\]|]+)(?:\|\s*([^\]]+))?\]/gi, function(match, promptText, url) {
+    var p = promptText.trim();
+    var seed = Math.floor(Math.random() * 1000000);
+    var imgUrl = (url || "").trim() || ("https://image.pollinations.ai/prompt/" + encodeURIComponent(p) + "?width=1024&height=1024&nologo=true&model=flux&seed=" + seed);
+    return '<div class="gen-image-card">' +
+      '<div class="gen-image-header">' +
+        '<span class="gen-badge">🎨 FLUX Image Generator</span>' +
+        '<span class="gen-prompt-title">"' + esc(p) + '"</span>' +
+      '</div>' +
+      '<div class="gen-img-wrap">' +
+        '<img src="' + imgUrl + '" class="gen-img" alt="' + esc(p) + '" onclick="window.open(this.src,\'_blank\')" loading="lazy" />' +
+      '</div>' +
+      '<div class="gen-actions">' +
+        '<a href="' + imgUrl + '" target="_blank" download="jarvis-generated.jpg" class="btn-primary sm">⬇ Download HD</a>' +
+        '<button class="btn-secondary sm" onclick="handleDirectImageGen(\'' + esc(p).replace(/'/g, "\\'") + '\')">🔄 Regenerate</button>' +
+      '</div>' +
+    '</div>';
+  });
+
+  // Render Audio Generator Tag: [GENERATE_AUDIO: text | url] or [GENERATE_AUDIO: text]
+  rendered = rendered.replace(/\[GENERATE_AUDIO:\s*([^\]|]+)(?:\|\s*([^\]]+))?\]/gi, function(match, audioText, url) {
+    var aText = audioText.trim();
+    var aUrl = (url || "").trim();
+    if (!aUrl) {
+      try {
+        var blob = generateFuturisticAudioWav(aText);
+        aUrl = URL.createObjectURL(blob);
+      } catch (e) { aUrl = ""; }
+    }
+    return '<div class="gen-audio-card">' +
+      '<div class="gen-audio-header">' +
+        '<div class="gen-audio-title">🎵 Generated Audio &middot; <span>' + esc(aText.slice(0, 36)) + '...</span></div>' +
+        '<span class="badge badge-ok">Audio Synthesizer</span>' +
+      '</div>' +
+      (aUrl ? '<audio controls class="gen-audio-player" src="' + aUrl + '"></audio>' : '') +
+      '<div class="gen-audio-actions">' +
+        '<button class="btn-primary sm" onclick="speak(\'' + esc(aText).replace(/'/g, "\\'") + '\')">🔊 Play JARVIS Voice</button>' +
+        (aUrl ? '<a href="' + aUrl + '" download="jarvis-audio.wav" class="btn-secondary sm">⬇ Download .WAV</a>' : '') +
+      '</div>' +
+    '</div>';
+  });
+
+  return rendered;
 }
 
 function newChat() {
@@ -1111,7 +1200,7 @@ function toast(msg, type) {
 function g(id)      { return document.getElementById(id); }
 function uid()      { return Math.random().toString(36).slice(2, 9); }
 function esc(s)     { return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
-function fmtNum(n)  { return n >= 1000 ? (n / 1000).toFixed(1) + "K" : String(n); }
+function fmtNum(n)  { return n >= 1000000 ? (n / 1000000).toFixed(1) + "M" : n >= 1000 ? (n / 1000).toFixed(1) + "K" : String(n); }
 function removeElement(id) { var el = g(id); if (el) el.remove(); }
 function daysDiff(a, b)    { return Math.floor((b - a) / (1000 * 60 * 60 * 24)); }
 function monthsDiff(a, b)  { return (b.getFullYear() - a.getFullYear()) * 12 + b.getMonth() - a.getMonth(); }
@@ -1131,6 +1220,136 @@ function downloadText(name, text, mime) {
   a.href  = URL.createObjectURL(new Blob([text], { type: mime }));
   a.download = name;
   a.click();
+}
+
+/* ══════════════════════════════════════════════════
+   IMAGE & AUDIO GENERATORS
+══════════════════════════════════════════════════ */
+async function handleDirectImageGen(promptText) {
+  var p = (promptText || "").trim();
+  if (!p) return;
+  var userMsg = {
+    role: "user",
+    content: "/imagine " + p,
+    ts: new Date().toISOString()
+  };
+  appendMessage(userMsg);
+  State.messages.push(userMsg);
+
+  var typingId = appendTypingIndicator();
+  setAssistantState("thinking");
+
+  try {
+    var seed = Math.floor(Math.random() * 1000000);
+    var imgUrl = "https://image.pollinations.ai/prompt/" + encodeURIComponent(p) + "?width=1024&height=1024&nologo=true&model=flux&seed=" + seed;
+
+    setTimeout(function() {
+      removeElement(typingId);
+      var aiReply = "Here is your generated image for **\"" + p + "\"**:\n\n[GENERATE_IMAGE: " + p + " | " + imgUrl + "]";
+      var aiMsg = { role: "assistant", content: aiReply, ts: new Date().toISOString() };
+      appendMessage(aiMsg);
+      State.messages.push(aiMsg);
+      setAssistantState("idle");
+      toast("Image generated successfully!", "success");
+    }, 600);
+  } catch(e) {
+    removeElement(typingId);
+    setAssistantState("idle");
+    toast("Error generating image: " + e.message, "error");
+  }
+}
+
+function handleDirectAudioGen(audioText) {
+  var t = (audioText || "").trim();
+  if (!t) return;
+  var userMsg = {
+    role: "user",
+    content: "/audio " + t,
+    ts: new Date().toISOString()
+  };
+  appendMessage(userMsg);
+  State.messages.push(userMsg);
+
+  var typingId = appendTypingIndicator();
+  setAssistantState("thinking");
+
+  setTimeout(function() {
+    removeElement(typingId);
+    var wavBlob = generateFuturisticAudioWav(t);
+    var audioUrl = URL.createObjectURL(wavBlob);
+    var aiReply = "Audio generated for **\"" + t + "\"**:\n\n[GENERATE_AUDIO: " + t + " | " + audioUrl + "]";
+    var aiMsg = { role: "assistant", content: aiReply, ts: new Date().toISOString() };
+    appendMessage(aiMsg);
+    State.messages.push(aiMsg);
+    setAssistantState("idle");
+    if (State.autoSpeak) speak(t);
+    toast("Audio synthesized successfully!", "success");
+  }, 400);
+}
+
+function promptImageGen() {
+  var p = prompt("🎨 Enter a prompt for AI Image Generation (e.g. A futuristic cybernetic city at twilight):");
+  if (p && p.trim()) {
+    handleDirectImageGen(p.trim());
+  }
+}
+
+function promptAudioGen() {
+  var a = prompt("🎵 Enter text or sound to synthesize (e.g. Systems online. Welcome back, Tony):");
+  if (a && a.trim()) {
+    handleDirectAudioGen(a.trim());
+  }
+}
+
+function generateFuturisticAudioWav(text) {
+  var sampleRate = 22050;
+  var duration = 2.5;
+  var totalSamples = Math.floor(sampleRate * duration);
+  var samples = new Float32Array(totalSamples);
+  
+  var hash = 0;
+  for (var i = 0; i < text.length; i++) hash = ((hash << 5) - hash) + text.charCodeAt(i);
+  var baseFreq = 220 + Math.abs(hash % 300);
+  
+  for (var i = 0; i < totalSamples; i++) {
+    var t = i / sampleRate;
+    var osc1 = Math.sin(2 * Math.PI * baseFreq * t);
+    var osc2 = Math.sin(2 * Math.PI * (baseFreq * 1.5) * t) * 0.5;
+    var osc3 = Math.sin(2 * Math.PI * (baseFreq * 2.0) * t) * 0.25;
+    var chord = (osc1 + osc2 + osc3) / 1.75;
+    var env = Math.exp(-t * 1.8);
+    var sweep = Math.sin(2 * Math.PI * 4 * t) * 0.1;
+    samples[i] = (chord + sweep) * env * 0.8;
+  }
+  return createWavBlob(samples, sampleRate);
+}
+
+function createWavBlob(samples, sampleRate) {
+  var buffer = new ArrayBuffer(44 + samples.length * 2);
+  var view = new DataView(buffer);
+  function writeString(offset, string) {
+    for (var i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+  }
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + samples.length * 2, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, samples.length * 2, true);
+  var offset = 44;
+  for (var i = 0; i < samples.length; i++) {
+    var s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    offset += 2;
+  }
+  return new Blob([view], { type: 'audio/wav' });
 }
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  BOOT  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
