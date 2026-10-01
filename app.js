@@ -1,4 +1,4 @@
-﻿/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    JARVIS â€” Personal AI Assistant  |  app.js  (v2 â€” clean rewrite)
    Providers: OpenRouter Â· Groq Â· OpenAI Â· Gemini Â· Local Ollama
    Privacy:   API keys in sessionStorage only. No telemetry.
@@ -66,6 +66,7 @@ function init() {
   window.addEventListener("beforeunload", () => { stopMic(); stopCamera(); });
   window.addEventListener("online",  updateNetworkStatus);
   window.addEventListener("offline", updateNetworkStatus);
+  setupDragDropAndPaste();
 }
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  SETTINGS  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
@@ -327,13 +328,22 @@ async function callOpenRouter(messages) {
 async function callGroq(messages) {
   const key = sessionStorage.getItem("j_groq_key") || State.apiKey;
   if (!key) throw new Error("No Groq API key. Go to Settings > AI & Keys.");
-  const model = State.model || "llama3-8b-8192";
+  const model = State.model || "llama-3.2-11b-vision-preview";
+  const apiMessages = messages.map(function(m) {
+    if (m.role === "user" && m.imageData) {
+      return { role: "user", content: [
+        { type: "text", text: m.content },
+        { type: "image_url", image_url: { url: m.imageData } }
+      ]};
+    }
+    return { role: m.role, content: m.content };
+  });
   const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
     body: JSON.stringify({
       model: model,
-      messages: messages.map(function(m) { return { role: m.role, content: m.content }; }),
+      messages: apiMessages,
       max_tokens: 1024
     }),
   });
@@ -380,8 +390,10 @@ async function callGemini(messages) {
   const contents = messages.filter(function(m) { return m.role !== "system"; }).map(function(m) {
     var parts = [];
     if (m.imageData) {
+      var match = m.imageData.match(/^data:(image\/[a-zA-Z+]+);base64,/);
+      var mime = match ? match[1] : "image/jpeg";
       var b64 = m.imageData.split(",")[1];
-      parts.push({ inline_data: { mime_type: "image/jpeg", data: b64 } });
+      parts.push({ inline_data: { mime_type: mime, data: b64 } });
     }
     parts.push({ text: m.content });
     return { role: m.role === "assistant" ? "model" : "user", parts: parts };
@@ -405,12 +417,19 @@ async function callGemini(messages) {
 async function callOllama(messages) {
   const url   = State.ollamaUrl   || "http://localhost:11434";
   const model = State.ollamaModel || "llama3";
+  const apiMessages = messages.map(function(m) {
+    var msgObj = { role: m.role, content: m.content };
+    if (m.role === "user" && m.imageData) {
+      msgObj.images = [m.imageData.split(",")[1]];
+    }
+    return msgObj;
+  });
   const resp  = await fetch(url + "/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       model: model,
-      messages: messages.map(function(m) { return { role: m.role, content: m.content }; }),
+      messages: apiMessages,
       stream: false
     }),
   });
@@ -716,6 +735,83 @@ function clearPendingImage() {
   State.pendingImageData = null;
   g("pending-img-bar").classList.add("hidden");
   var t = g("pending-img-thumb"); if (t) t.src = "";
+  var fu = g("file-upload"); if (fu) fu.value = "";
+  var cfu = g("cam-file-input"); if (cfu) cfu.value = "";
+}
+
+function handleFileUpload(e) {
+  var file = e.target.files && e.target.files[0];
+  if (!file) return;
+  attachImageFile(file);
+}
+
+function handleCamFileUpload(e) {
+  var file = e.target.files && e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(evt) {
+    var dataUrl = evt.target.result;
+    g("cam-snapshot").src = dataUrl;
+    g("cam-preview").style.display = "";
+    g("cam-ask-btn").disabled = false;
+    State.pendingImageData = dataUrl;
+    g("pending-img-thumb").src = dataUrl;
+    g("pending-img-bar").classList.remove("hidden");
+    toast("Image attached for analysis", "success");
+  };
+  reader.readAsDataURL(file);
+}
+
+function attachImageFile(file) {
+  if (!file.type.startsWith("image/")) {
+    toast("Please select an image file (PNG, JPG, WebP)", "warn");
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(evt) {
+    var dataUrl = evt.target.result;
+    State.pendingImageData = dataUrl;
+    g("pending-img-thumb").src = dataUrl;
+    g("pending-img-bar").classList.remove("hidden");
+    toast("Image attached", "success");
+  };
+  reader.readAsDataURL(file);
+}
+
+function setupDragDropAndPaste() {
+  var area = document.querySelector(".input-area") || document.body;
+  if (!area) return;
+
+  window.addEventListener("paste", function(e) {
+    var items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        var blob = items[i].getAsFile();
+        attachImageFile(blob);
+        toast("Image pasted from clipboard!", "success");
+        break;
+      }
+    }
+  });
+
+  area.addEventListener("dragover", function(e) {
+    e.preventDefault();
+    area.classList.add("drag-over");
+  });
+
+  ["dragleave", "dragend"].forEach(function(ev) {
+    area.addEventListener(ev, function() {
+      area.classList.remove("drag-over");
+    });
+  });
+
+  area.addEventListener("drop", function(e) {
+    e.preventDefault();
+    area.classList.remove("drag-over");
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      attachImageFile(e.dataTransfer.files[0]);
+    }
+  });
 }
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  ONBOARDING  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
@@ -835,20 +931,21 @@ function updateProviderUI() {
   g("s-ollama-block").style.display = p === "ollama" ? "" : "none";
   var m = g("s-model");
   if (p === "groq") {
-    m.innerHTML = '<option value="llama3-8b-8192">llama3-8b-8192 (Fast Â· Free)</option>' +
-                  '<option value="llama3-70b-8192">llama3-70b-8192 (Smart Â· Free)</option>' +
-                  '<option value="mixtral-8x7b-32768">mixtral-8x7b-32768</option>';
+    m.innerHTML = '<option value="llama-3.2-11b-vision-preview">llama-3.2-11b-vision (Multimodal)</option>' +
+                  '<option value="llama3-70b-8192">llama3-70b-8192 (Smart · Text)</option>' +
+                  '<option value="llama3-8b-8192">llama3-8b-8192 (Fast)</option>';
   } else if (p === "gemini") {
-    m.innerHTML = '<option value="gemini-1.5-flash">gemini-1.5-flash (Fast)</option>' +
-                  '<option value="gemini-1.5-pro">gemini-1.5-pro (Smart)</option>';
+    m.innerHTML = '<option value="gemini-1.5-flash">gemini-1.5-flash (Multimodal)</option>' +
+                  '<option value="gemini-1.5-pro">gemini-1.5-pro (Multimodal)</option>' +
+                  '<option value="gemini-2.0-flash-exp">gemini-2.0-flash-exp (Multimodal)</option>';
   } else if (p === "openrouter") {
-    m.innerHTML = '<option value="openai/gpt-4o-mini">openai/gpt-4o-mini</option>' +
-                  '<option value="openai/gpt-4o">openai/gpt-4o</option>' +
-                  '<option value="meta-llama/llama-3.1-8b-instruct:free">llama-3.1-8b (Free)</option>' +
-                  '<option value="mistralai/mistral-7b-instruct:free">mistral-7b (Free)</option>';
+    m.innerHTML = '<option value="openai/gpt-4o-mini">openai/gpt-4o-mini (Multimodal Vision)</option>' +
+                  '<option value="google/gemini-2.0-flash-001">google/gemini-2.0-flash-001 (Multimodal)</option>' +
+                  '<option value="openai/gpt-4o">openai/gpt-4o (Multimodal Vision)</option>' +
+                  '<option value="meta-llama/llama-3.2-11b-vision-instruct:free">llama-3.2-11b-vision (Free)</option>';
   } else {
-    m.innerHTML = '<option value="gpt-4o-mini">gpt-4o-mini (Fast Â· Cheap)</option>' +
-                  '<option value="gpt-4o">gpt-4o (Smart Â· Moderate)</option>';
+    m.innerHTML = '<option value="gpt-4o-mini">gpt-4o-mini (Multimodal Vision)</option>' +
+                  '<option value="gpt-4o">gpt-4o (Multimodal Vision)</option>';
   }
   if (State.model) m.value = State.model;
 }

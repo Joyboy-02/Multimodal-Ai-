@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
@@ -30,19 +30,19 @@
       <p>JARVIS works with cloud AI (you supply an API key) or a local Ollama instance.</p>
       <div class="provider-grid">
         <button class="provider-btn" id="prov-openai" onclick="selectProvider('openai')">
-          <span class="prov-icon">?</span>OpenAI<small>GPT-4o / GPT-4o-mini</small>
+          <span class="prov-icon">🧠</span>OpenAI<small>GPT-4o / GPT-4o-mini (Vision)</small>
         </button>
         <button class="provider-btn" id="prov-gemini" onclick="selectProvider('gemini')">
-          <span class="prov-icon">?</span>Gemini<small>1.5-flash / pro</small>
+          <span class="prov-icon">✨</span>Gemini<small>2.0 / 1.5 Flash (Multimodal)</small>
         </button>
         <button class="provider-btn active" id="prov-openrouter" onclick="selectProvider('openrouter')">
-          <span class="prov-icon">🔀</span>OpenRouter<small>100+ models · Free tier</small>
+          <span class="prov-icon">🔀</span>OpenRouter<small>Gemini 2.0 / GPT-4o / Vision</small>
         </button>
         <button class="provider-btn" id="prov-groq" onclick="selectProvider('groq')">
-          <span class="prov-icon">⚡</span>Groq<small>llama3 · Ultra-fast · Free</small>
+          <span class="prov-icon">⚡</span>Groq<small>Llama 3.2 Vision · Ultra-fast</small>
         </button>
         <button class="provider-btn" id="prov-ollama" onclick="selectProvider('ollama')">
-          <span class="prov-icon">??</span>Local Ollama<small>Free · Fully Private</small>
+          <span class="prov-icon">🦙</span>Local Ollama<small>Llava / Llama 3.2 Vision</small>
         </button>
       </div>
       <div id="api-key-block" class="input-group mt-16">
@@ -181,10 +181,10 @@
       </div>
       <div id="s-model-block" class="setting-row"><label>Model</label>
         <select id="s-model">
-          <option value="gpt-4o-mini">gpt-4o-mini (Fast · Cheap)</option>
-          <option value="gpt-4o">gpt-4o (Smart · Moderate cost)</option>
-          <option value="gemini-1.5-flash">gemini-1.5-flash</option>
-          <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+          <option value="openai/gpt-4o-mini">openai/gpt-4o-mini (Multimodal Vision)</option>
+          <option value="google/gemini-2.0-flash-001">google/gemini-2.0-flash-001 (Multimodal)</option>
+          <option value="openai/gpt-4o">openai/gpt-4o (Multimodal Vision)</option>
+          <option value="meta-llama/llama-3.2-11b-vision-instruct:free">llama-3.2-11b-vision (Free)</option>
         </select>
       </div>
       <div id="s-ollama-block" class="setting-row" style="display:none">
@@ -252,10 +252,14 @@
       <button class="cam-discard" onclick="discardSnapshot()">? Discard</button>
     </div>
     <div class="cam-controls">
-      <button class="btn-primary" id="cam-capture-btn" onclick="captureFrame()">?? Capture Frame</button>
-      <div class="cam-ask-row">
-        <input type="text" id="cam-question" placeholder="Ask about this image… (optional)" />
-        <button class="btn-secondary" id="cam-ask-btn" onclick="askAboutFrame()" disabled>Ask ?</button>
+      <div class="btn-row">
+        <button class="btn-primary" id="cam-capture-btn" onclick="captureFrame()">📷 Capture Live Frame</button>
+        <button class="btn-secondary" onclick="g('cam-file-input').click()">🖼️ Upload Image File</button>
+        <input type="file" id="cam-file-input" accept="image/*" onchange="handleCamFileUpload(event)" style="display:none" />
+      </div>
+      <div class="cam-ask-row mt-8">
+        <input type="text" id="cam-question" placeholder="Ask about this image… (e.g. Describe this image, read text...)" />
+        <button class="btn-secondary" id="cam-ask-btn" onclick="askAboutFrame()" disabled>Ask AI ➔</button>
       </div>
     </div>
     <p class="hint cam-hint">Captured frames are only sent to AI when you click "Ask ?".</p>
@@ -343,11 +347,16 @@
 
       <div class="input-area">
         <div class="input-toolbar">
-          <button class="tool-btn" id="cam-toggle-btn" onclick="toggleCamera()" title="Toggle camera" aria-label="Camera">
-            ??
+          <button class="tool-btn" id="cam-toggle-btn" onclick="toggleCamera()" title="Camera visual perception" aria-label="Camera">
+            📷
           </button>
+          <button class="tool-btn" id="upload-btn" onclick="g('file-upload').click()" title="Attach image file / screenshot" aria-label="Upload Image">
+            🖼️
+          </button>
+          <input type="file" id="file-upload" accept="image/*" onchange="handleFileUpload(event)" style="display:none" />
           <span id="cam-active-badge" class="cam-badge hidden"><span class="dot-live"></span> Camera On</span>
           <span id="voice-active-badge" class="voice-badge hidden"><span class="dot-live-red"></span> Recording</span>
+          <span class="multimodal-tag" title="Multimodal AI Vision & Voice enabled">👁️ Multimodal Active</span>
         </div>
         <div class="input-row">
           <textarea
