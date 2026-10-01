@@ -29,13 +29,13 @@
       <h3>Step 1 of 3 — Choose AI Provider</h3>
       <p>JARVIS works with cloud AI (you supply an API key) or a local Ollama instance.</p>
       <div class="provider-grid">
-        <button class="provider-btn active" id="prov-openai" onclick="selectProvider('openai')">
+        <button class="provider-btn" id="prov-openai" onclick="selectProvider('openai')">
           <span class="prov-icon">?</span>OpenAI<small>GPT-4o / GPT-4o-mini</small>
         </button>
         <button class="provider-btn" id="prov-gemini" onclick="selectProvider('gemini')">
           <span class="prov-icon">?</span>Gemini<small>1.5-flash / pro</small>
         </button>
-        <button class="provider-btn" id="prov-openrouter" onclick="selectProvider('openrouter')">
+        <button class="provider-btn active" id="prov-openrouter" onclick="selectProvider('openrouter')">
           <span class="prov-icon">🔀</span>OpenRouter<small>100+ models · Free tier</small>
         </button>
         <button class="provider-btn" id="prov-groq" onclick="selectProvider('groq')">
@@ -400,5 +400,6 @@
 <script src="app.js"></script>
 </body>
 </html>
+
 
 
