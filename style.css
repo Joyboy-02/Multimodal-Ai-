@@ -331,3 +331,25 @@ input[type="range"]:focus{box-shadow:none}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 
+
+/* ─────────────────────  CORS BANNER  ──────────────────────────── */
+.cors-banner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9990;
+  background: linear-gradient(135deg, #1a0d00, #2d1500);
+  border-bottom: 2px solid var(--c-warn);
+  color: var(--c-warn); display: flex; align-items: flex-start;
+  gap: 14px; padding: 14px 20px; font-size: .88rem; line-height: 1.5;
+  animation: slideDown .4s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes slideDown { from { transform:translateY(-100%); } to { transform:translateY(0); } }
+.cors-icon { font-size: 1.5rem; flex-shrink: 0; }
+.cors-banner > div { flex: 1; }
+.cors-banner strong { color: #ffcc00; }
+.cors-banner a { color: var(--c-primary); font-weight: 700; }
+.cors-banner button {
+  background: none; border: 1px solid var(--c-warn); color: var(--c-warn);
+  border-radius: 50%; width: 24px; height: 24px; cursor: pointer;
+  flex-shrink: 0; font-size: .8rem; line-height: 1; display: flex;
+  align-items: center; justify-content: center;
+}
+.cors-banner button:hover { background: rgba(255,165,2,.2); }

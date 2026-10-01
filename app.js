@@ -1,11 +1,11 @@
-/* ══════════════════════════════════════════════════════════════════
-   JARVIS — Personal AI Assistant  |  app.js  (v2 — clean rewrite)
-   Providers: OpenRouter · Groq · OpenAI · Gemini · Local Ollama
+﻿/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   JARVIS â€” Personal AI Assistant  |  app.js  (v2 â€” clean rewrite)
+   Providers: OpenRouter Â· Groq Â· OpenAI Â· Gemini Â· Local Ollama
    Privacy:   API keys in sessionStorage only. No telemetry.
-══════════════════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 "use strict";
 
-/* ════════════════════  STATE  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  STATE  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 const State = {
   provider:      "openrouter",
   model:         "openai/gpt-4o-mini",
@@ -41,8 +41,14 @@ const State = {
   isThinking:    false,
 };
 
-/* ════════════════════  INIT  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  INIT  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function init() {
+  // Detect file:// protocol and show CORS warning
+  if (window.location.protocol === "file:") {
+    var banner = g("cors-banner");
+    if (banner) banner.classList.remove("hidden");
+  }
+
   loadSettings();
   loadMemories();
   loadTokenState();
@@ -62,7 +68,7 @@ function init() {
   window.addEventListener("offline", updateNetworkStatus);
 }
 
-/* ════════════════════  SETTINGS  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  SETTINGS  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function loadSettings() {
   const s = JSON.parse(localStorage.getItem("j_settings") || "{}");
   State.provider      = s.provider      || "openrouter";
@@ -126,7 +132,7 @@ function saveSettings() {
   toast("Settings saved", "success");
 }
 
-/* ════════════════════  TOKEN TRACKING  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  TOKEN TRACKING  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function loadTokenState() {
   const ts = JSON.parse(localStorage.getItem("j_tokens") || "{}");
   State.tokensUsed  = ts.used || 0;
@@ -176,7 +182,7 @@ function checkTokenWarnings() {
 
 function isOverBudget() { return State.tokensUsed >= State.tokenBudget; }
 
-/* ════════════════════  MEMORY  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  MEMORY  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function loadMemories() {
   State.memories = JSON.parse(localStorage.getItem("j_memories") || "[]");
 }
@@ -256,7 +262,7 @@ function renderSettingsMemory() {
   ).join("");
 }
 
-/* ════════════════════  AI PROVIDERS  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  AI PROVIDERS  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 async function callAI(messages) {
   if (State.localOnly && State.provider !== "ollama") {
     return "[LOCAL-ONLY MODE] Cloud AI is disabled. Enable Ollama or turn off local-only mode in Settings > Privacy.";
@@ -265,13 +271,24 @@ async function callAI(messages) {
     return "[BUDGET EXCEEDED] You have used " + fmtNum(State.tokensUsed) + " / " + fmtNum(State.tokenBudget) +
            " tokens this " + State.budgetPeriod + ". Increase your budget in Settings > AI & Keys.";
   }
-  switch (State.provider) {
-    case "openrouter": return await callOpenRouter(messages);
-    case "groq":       return await callGroq(messages);
-    case "openai":     return await callOpenAI(messages);
-    case "gemini":     return await callGemini(messages);
-    case "ollama":     return await callOllama(messages);
-    default:           throw new Error("Unknown provider: " + State.provider);
+  try {
+    switch (State.provider) {
+      case "openrouter": return await callOpenRouter(messages);
+      case "groq":       return await callGroq(messages);
+      case "openai":     return await callOpenAI(messages);
+      case "gemini":     return await callGemini(messages);
+      case "ollama":     return await callOllama(messages);
+      default:           throw new Error("Unknown provider: " + State.provider);
+    }
+  } catch (err) {
+    if (err.message === "Failed to fetch" || err.name === "TypeError") {
+      throw new Error(
+        "Network error - could not reach the AI API.\n\n" +
+        "IMPORTANT: You must run JARVIS via a local server, not by opening index.html directly.\n\n" +
+        "Double-click start.bat in your project folder, then open http://localhost:3000 in Chrome."
+      );
+    }
+    throw err;
   }
 }
 
@@ -402,7 +419,7 @@ async function callOllama(messages) {
   return data.message && data.message.content ? data.message.content : "(no response)";
 }
 
-/* ════════════════════  SYSTEM PROMPT  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  SYSTEM PROMPT  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function buildSystemPrompt() {
   var styleMap = {
     concise:  "Be concise and direct. Keep answers short unless detail is requested.",
@@ -415,7 +432,7 @@ function buildSystemPrompt() {
     "\nCurrent date: " + new Date().toLocaleDateString("en-US", { weekday:"long", year:"numeric", month:"long", day:"numeric" }) + ".";
 }
 
-/* ════════════════════  SEND MESSAGE  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  SEND MESSAGE  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 async function sendMessage() {
   const input = g("chat-input");
   const text  = input.value.trim();
@@ -466,7 +483,7 @@ function autoSummarizeMemory() {
   }
 }
 
-/* ════════════════════  CHAT RENDERING  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  CHAT RENDERING  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function appendMessage(msg) {
   var container = g("messages");
   var div = document.createElement("div");
@@ -524,11 +541,11 @@ function newChat() {
   if (State.messages.length > 0 && !confirm("Start a new chat? Current conversation will be cleared.")) return;
   State.messages = [];
   g("messages").innerHTML = "";
-  appendSystemMsg("New session started · " + State.assistantName + " ready");
+  appendSystemMsg("New session started Â· " + State.assistantName + " ready");
   toast("New chat started", "success");
 }
 
-/* ════════════════════  ASSISTANT STATE  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  ASSISTANT STATE  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function setAssistantState(state) {
   State.isThinking = state === "thinking";
   var core  = g("av-core-state");
@@ -541,7 +558,7 @@ function setAssistantState(state) {
   label.className   = "state-badge " + (cls[state] || "state-idle");
 }
 
-/* ════════════════════  VOICE — STT  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  VOICE â€” STT  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function toggleMic() {
   if (!State.allowMic) { toast("Microphone disabled. Enable in Settings > Privacy.", "warn"); return; }
   if (State.micActive) stopMic(); else startMic();
@@ -599,7 +616,7 @@ function stopMic() {
   setAssistantState("idle");
 }
 
-/* ════════════════════  VOICE — TTS  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  VOICE â€” TTS  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function speak(text) {
   if (!State.synth) return;
   State.synth.cancel();
@@ -633,7 +650,7 @@ function populateVoices() {
     }).join("");
 }
 
-/* ════════════════════  CAMERA  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  CAMERA  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function toggleCamera() {
   if (!State.allowCam) { toast("Camera disabled. Enable in Settings > Privacy.", "warn"); return; }
   if (State.camActive) closeCameraModal(); else openCameraModal();
@@ -701,7 +718,7 @@ function clearPendingImage() {
   var t = g("pending-img-thumb"); if (t) t.src = "";
 }
 
-/* ════════════════════  ONBOARDING  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  ONBOARDING  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function selectProvider(p) {
   State.provider = p;
   document.querySelectorAll(".provider-btn").forEach(function(b) { b.classList.remove("active"); });
@@ -760,7 +777,7 @@ function hideOnboarding() {
   populateVoices();
   if (!State.periodStart) State.periodStart = new Date();
   updateTokenDisplay();
-  appendSystemMsg(State.assistantName + " initialized · " + getTimeGreeting());
+  appendSystemMsg(State.assistantName + " initialized Â· " + getTimeGreeting());
   var w = {
     role: "assistant",
     content: getTimeGreeting() + ", " + State.userName + "! I'm " + State.assistantName +
@@ -771,7 +788,7 @@ function hideOnboarding() {
   State.messages.push(w);
 }
 
-/* ════════════════════  SETTINGS MODAL  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  SETTINGS MODAL  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function openSettings() {
   g("s-user-name").value        = State.userName;
   g("s-assistant-name").value   = State.assistantName;
@@ -818,8 +835,8 @@ function updateProviderUI() {
   g("s-ollama-block").style.display = p === "ollama" ? "" : "none";
   var m = g("s-model");
   if (p === "groq") {
-    m.innerHTML = '<option value="llama3-8b-8192">llama3-8b-8192 (Fast · Free)</option>' +
-                  '<option value="llama3-70b-8192">llama3-70b-8192 (Smart · Free)</option>' +
+    m.innerHTML = '<option value="llama3-8b-8192">llama3-8b-8192 (Fast Â· Free)</option>' +
+                  '<option value="llama3-70b-8192">llama3-70b-8192 (Smart Â· Free)</option>' +
                   '<option value="mixtral-8x7b-32768">mixtral-8x7b-32768</option>';
   } else if (p === "gemini") {
     m.innerHTML = '<option value="gemini-1.5-flash">gemini-1.5-flash (Fast)</option>' +
@@ -830,13 +847,13 @@ function updateProviderUI() {
                   '<option value="meta-llama/llama-3.1-8b-instruct:free">llama-3.1-8b (Free)</option>' +
                   '<option value="mistralai/mistral-7b-instruct:free">mistral-7b (Free)</option>';
   } else {
-    m.innerHTML = '<option value="gpt-4o-mini">gpt-4o-mini (Fast · Cheap)</option>' +
-                  '<option value="gpt-4o">gpt-4o (Smart · Moderate)</option>';
+    m.innerHTML = '<option value="gpt-4o-mini">gpt-4o-mini (Fast Â· Cheap)</option>' +
+                  '<option value="gpt-4o">gpt-4o (Smart Â· Moderate)</option>';
   }
   if (State.model) m.value = State.model;
 }
 
-/* ════════════════════  USAGE DASHBOARD  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  USAGE DASHBOARD  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function renderUsageDashboard() {
   var used   = State.tokensUsed, budget = State.tokenBudget;
   var pct    = Math.min(100, Math.round(used / budget * 100));
@@ -931,7 +948,7 @@ function exportUsageReport() {
   toast("Report exported", "success");
 }
 
-/* ════════════════════  VIEWS + SIDEBAR  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  VIEWS + SIDEBAR  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function switchView(name) {
   document.querySelectorAll(".view").forEach(function(v) { v.classList.remove("active"); });
   document.querySelectorAll(".nav-btn").forEach(function(b) { b.classList.remove("active"); });
@@ -943,7 +960,7 @@ function switchView(name) {
 
 function toggleSidebar() { g("sidebar").classList.toggle("collapsed"); }
 
-/* ════════════════════  NETWORK  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  NETWORK  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function monitorNetwork() { updateNetworkStatus(); }
 
 function updateNetworkStatus() {
@@ -961,19 +978,19 @@ function updateAiLabel() {
   lbl.textContent = local ? "Local" : "Cloud";
 }
 
-/* ════════════════════  THEME  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  THEME  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); State.theme = t; }
 
-/* ════════════════════  ASSISTANT NAME  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  ASSISTANT NAME  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function updateAssistantName() {
   var name = State.assistantName || "JARVIS";
   ["sidebar-name", "chat-assistant-name"].forEach(function(id) {
     var el = g(id); if (el) el.textContent = name;
   });
-  document.title = name + " — Personal AI Assistant";
+  document.title = name + " â€” Personal AI Assistant";
 }
 
-/* ════════════════════  INPUT HELPERS  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  INPUT HELPERS  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function handleInputKey(e) {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 }
@@ -983,7 +1000,7 @@ function autoResize(el) {
   el.style.height = Math.min(el.scrollHeight, 140) + "px";
 }
 
-/* ════════════════════  TOAST  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  TOAST  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 var _toastTimer;
 function toast(msg, type) {
   var el = g("toast"); if (!el) return;
@@ -993,7 +1010,7 @@ function toast(msg, type) {
   _toastTimer = setTimeout(function() { el.classList.add("hidden"); }, 3500);
 }
 
-/* ════════════════════  UTILITIES  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  UTILITIES  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function g(id)      { return document.getElementById(id); }
 function uid()      { return Math.random().toString(36).slice(2, 9); }
 function esc(s)     { return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
@@ -1019,5 +1036,7 @@ function downloadText(name, text, mime) {
   a.click();
 }
 
-/* ════════════════════  BOOT  ════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•  BOOT  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 document.addEventListener("DOMContentLoaded", init);
+
+

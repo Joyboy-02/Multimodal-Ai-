@@ -396,10 +396,22 @@
   </main>
 </div>
 
+<!-- CORS / file:// warning banner -->
+<div id="cors-banner" class="cors-banner hidden">
+  <span class="cors-icon">⚠</span>
+  <div>
+    <strong>Run via local server to use AI features.</strong>
+    You opened JARVIS as a file:// URL — browsers block API calls in this mode.
+    <br/>Double-click <strong>start.bat</strong> then open
+    <a href="http://localhost:3000" target="_blank">http://localhost:3000</a>
+  </div>
+  <button onclick="document.getElementById('cors-banner').classList.add('hidden')" aria-label="Dismiss">✕</button>
+</div>
 <script src="config.js" onerror="console.info('config.js not found - enter API key in settings')"></script>
 <script src="app.js"></script>
 </body>
 </html>
+
 
 
 
