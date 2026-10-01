@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JARVIS — Personal AI Assistant</title>
+  <meta name="description" content="A privacy-first personal AI assistant with voice, vision, memory, and offline capabilities." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ONBOARDING MODAL -->
+<div id="onboarding-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+  <div class="modal-box onboarding-box">
+    <div class="ob-avatar">
+      <div class="ob-ring ob-r1"></div>
+      <div class="ob-ring ob-r2"></div>
+      <div class="ob-ring ob-r3"></div>
+      <div class="ob-core"></div>
+    </div>
+    <h1 id="onboarding-title">Initializing <span class="accent">JARVIS</span></h1>
+    <p class="ob-sub">Your personal AI assistant. Local-first. Privacy-conscious.</p>
+
+    <!-- Step 1 -->
+    <div class="ob-steps" id="ob-step-1">
+      <h3>Step 1 of 3 — Choose AI Provider</h3>
+      <p>JARVIS works with cloud AI (you supply an API key) or a local Ollama instance.</p>
+      <div class="provider-grid">
+        <button class="provider-btn active" id="prov-openai" onclick="selectProvider('openai')">
+          <span class="prov-icon">?</span>OpenAI<small>GPT-4o / GPT-4o-mini</small>
+        </button>
+        <button class="provider-btn" id="prov-gemini" onclick="selectProvider('gemini')">
+          <span class="prov-icon">?</span>Gemini<small>1.5-flash / pro</small>
+        </button>
+        <button class="provider-btn" id="prov-ollama" onclick="selectProvider('ollama')">
+          <span class="prov-icon">??</span>Local Ollama<small>Free · Fully Private</small>
+        </button>
+      </div>
+      <div id="api-key-block" class="input-group mt-16">
+        <label for="ob-api-key">API Key <span class="badge badge-warn">Session only — not saved to disk</span></label>
+        <input type="password" id="ob-api-key" placeholder="sk-..." autocomplete="off" spellcheck="false" />
+        <small class="hint">Cleared when you close this tab.</small>
+      </div>
+      <div id="ollama-block" class="input-group mt-16" style="display:none">
+        <label for="ob-ollama-url">Ollama URL</label>
+        <input type="text" id="ob-ollama-url" value="http://localhost:11434" autocomplete="off" />
+        <label for="ob-ollama-model" class="mt-8">Model Name</label>
+        <input type="text" id="ob-ollama-model" value="llama3" autocomplete="off" />
+        <small class="hint">Run <code>ollama serve</code> locally first.</small>
+      </div>
+      <button class="btn-primary mt-24" onclick="obNext(1)">Continue ?</button>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="ob-steps hidden" id="ob-step-2">
+      <h3>Step 2 of 3 — Personalize</h3>
+      <div class="input-group">
+        <label for="ob-user-name">Your Name</label>
+        <input type="text" id="ob-user-name" placeholder="e.g. Tony" maxlength="32" />
+      </div>
+      <div class="input-group mt-16">
+        <label for="ob-assistant-name">Assistant Name <span class="hint">(default: JARVIS)</span></label>
+        <input type="text" id="ob-assistant-name" placeholder="JARVIS" maxlength="32" />
+      </div>
+      <button class="btn-primary mt-24" onclick="obNext(2)">Continue ?</button>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="ob-steps hidden" id="ob-step-3">
+      <h3>Step 3 of 3 — Permissions &amp; Privacy</h3>
+      <div class="perm-list">
+        <div class="perm-item">
+          <span class="perm-icon">??</span>
+          <div><strong>Microphone</strong><p>Active only when you click mic button. Always indicated.</p></div>
+          <label class="toggle"><input type="checkbox" id="perm-mic" checked /><span></span></label>
+        </div>
+        <div class="perm-item">
+          <span class="perm-icon">??</span>
+          <div><strong>Camera</strong><p>Active only when you enable it. Live indicator shown.</p></div>
+          <label class="toggle"><input type="checkbox" id="perm-cam" /><span></span></label>
+        </div>
+        <div class="perm-item">
+          <span class="perm-icon">??</span>
+          <div><strong>Internet / Cloud AI</strong><p>Cloud calls only when authorized. No silent requests.</p></div>
+          <label class="toggle"><input type="checkbox" id="perm-net" checked /><span></span></label>
+        </div>
+        <div class="perm-item">
+          <span class="perm-icon">??</span>
+          <div><strong>Conversation memory</strong><p>Saves summaries locally. You can delete anytime.</p></div>
+          <label class="toggle"><input type="checkbox" id="perm-mem" checked /><span></span></label>
+        </div>
+      </div>
+      <div class="privacy-note">
+        <strong>Privacy:</strong> Your data stays on this device. No analytics. No tracking. No telemetry.
+        API keys are held in session memory only and cleared when you close this tab.
+      </div>
+      <button class="btn-primary mt-24" onclick="obFinish()">Launch JARVIS ?</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div id="settings-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+  <div class="modal-box settings-box">
+    <div class="modal-header">
+      <h2 id="settings-title">? Settings</h2>
+      <button class="close-btn" onclick="closeSettings()" aria-label="Close settings">?</button>
+    </div>
+    <div class="settings-tabs">
+      <button class="stab active" onclick="switchTab('general')" id="stab-general">General</button>
+      <button class="stab" onclick="switchTab('voice')" id="stab-voice">Voice</button>
+      <button class="stab" onclick="switchTab('ai')" id="stab-ai">AI &amp; Keys</button>
+      <button class="stab" onclick="switchTab('memory')" id="stab-memory">Memory</button>
+      <button class="stab" onclick="switchTab('privacy')" id="stab-privacy">Privacy</button>
+      <button class="stab" onclick="switchTab('usage')" id="stab-usage">Usage</button>
+    </div>
+    <!-- General Tab -->
+    <div class="tab-panel active" id="panel-general">
+      <div class="setting-row"><label>Your Name</label><input type="text" id="s-user-name" maxlength="32" /></div>
+      <div class="setting-row"><label>Assistant Name</label><input type="text" id="s-assistant-name" maxlength="32" /></div>
+      <div class="setting-row"><label>Theme</label>
+        <select id="s-theme" onchange="applyTheme(this.value)">
+          <option value="dark">Dark (Default)</option>
+          <option value="light">Light</option>
+          <option value="midnight">Midnight Blue</option>
+        </select>
+      </div>
+      <div class="setting-row"><label>Response style</label>
+        <select id="s-response-style">
+          <option value="concise">Concise (Default)</option>
+          <option value="detailed">Detailed</option>
+          <option value="bullet">Bullet points</option>
+        </select>
+      </div>
+    </div>
+    <!-- Voice Tab -->
+    <div class="tab-panel" id="panel-voice">
+      <div class="setting-row"><label>Voice</label><select id="s-voice-name"></select></div>
+      <div class="setting-row"><label>Speed <span id="s-rate-val">1.0</span>×</label>
+        <input type="range" id="s-rate" min="0.5" max="2" step="0.1" value="1" oninput="document.getElementById('s-rate-val').textContent=parseFloat(this.value).toFixed(1)" /></div>
+      <div class="setting-row"><label>Volume <span id="s-vol-val">80</span>%</label>
+        <input type="range" id="s-volume" min="0" max="100" step="5" value="80" oninput="document.getElementById('s-vol-val').textContent=this.value" /></div>
+      <div class="setting-row"><label>Language</label>
+        <select id="s-lang">
+          <option value="en-US">English (US)</option>
+          <option value="en-GB">English (UK)</option>
+          <option value="es-ES">Spanish</option>
+          <option value="fr-FR">French</option>
+          <option value="de-DE">German</option>
+          <option value="ja-JP">Japanese</option>
+          <option value="hi-IN">Hindi</option>
+        </select>
+      </div>
+      <div class="setting-row"><label>Auto-speak responses</label>
+        <label class="toggle"><input type="checkbox" id="s-auto-speak" /><span></span></label></div>
+      <button class="btn-secondary mt-16" onclick="testVoice()">? Test Voice</button>
+    </div>
+    <!-- AI Tab -->
+    <div class="tab-panel" id="panel-ai">
+      <div class="setting-row"><label>AI Provider</label>
+        <select id="s-provider" onchange="updateProviderUI()">
+          <option value="openai">OpenAI</option>
+          <option value="gemini">Google Gemini</option>
+          <option value="ollama">Local Ollama</option>
+        </select>
+      </div>
+      <div id="s-key-block" class="setting-row">
+        <label>API Key <span class="badge badge-warn">Session only</span></label>
+        <input type="password" id="s-api-key" autocomplete="off" placeholder="Paste key here…" />
+      </div>
+      <div id="s-model-block" class="setting-row"><label>Model</label>
+        <select id="s-model">
+          <option value="gpt-4o-mini">gpt-4o-mini (Fast · Cheap)</option>
+          <option value="gpt-4o">gpt-4o (Smart · Moderate cost)</option>
+          <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+          <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+        </select>
+      </div>
+      <div id="s-ollama-block" class="setting-row" style="display:none">
+        <label>Ollama URL</label><input type="text" id="s-ollama-url" value="http://localhost:11434" />
+        <label class="mt-8">Model</label><input type="text" id="s-ollama-model" value="llama3" />
+      </div>
+      <div class="setting-row"><label>Token budget (per period)</label>
+        <input type="number" id="s-token-budget" value="10000" min="1000" max="1000000" /></div>
+      <div class="setting-row"><label>Budget period</label>
+        <select id="s-budget-period">
+          <option value="daily">Daily</option>
+          <option value="weekly" selected>Weekly</option>
+          <option value="monthly">Monthly</option>
+        </select>
+      </div>
+    </div>
+    <!-- Memory Tab -->
+    <div class="tab-panel" id="panel-memory">
+      <div class="setting-row"><label>Enable memory</label>
+        <label class="toggle"><input type="checkbox" id="s-mem-enabled" checked /><span></span></label></div>
+      <div class="memory-list" id="memory-list-container"><p class="hint">No memories yet.</p></div>
+      <div class="btn-row mt-16">
+        <button class="btn-danger" onclick="clearAllMemory()">?? Delete All</button>
+        <button class="btn-secondary" onclick="exportMemory()">? Export JSON</button>
+      </div>
+    </div>
+    <!-- Privacy Tab -->
+    <div class="tab-panel" id="panel-privacy">
+      <div class="setting-row"><label>Local-only mode <span class="hint">(disables all cloud)</span></label>
+        <label class="toggle"><input type="checkbox" id="s-local-only" /><span></span></label></div>
+      <div class="setting-row"><label>Allow camera</label>
+        <label class="toggle"><input type="checkbox" id="s-allow-cam" /><span></span></label></div>
+      <div class="setting-row"><label>Allow microphone</label>
+        <label class="toggle"><input type="checkbox" id="s-allow-mic" checked /><span></span></label></div>
+      <div class="setting-row"><label>Clear chat on tab close</label>
+        <label class="toggle"><input type="checkbox" id="s-clear-on-close" /><span></span></label></div>
+      <div class="privacy-note mt-16">
+        <strong>Stored locally:</strong> chat history (session), memories (localStorage), settings (localStorage).<br/>
+        <strong>Never stored:</strong> API keys, biometric data, camera frames.<br/>
+        <strong>Never sent externally without your action:</strong> memories, camera frames.
+      </div>
+    </div>
+    <!-- Usage Tab -->
+    <div class="tab-panel" id="panel-usage"><div id="usage-dashboard"></div></div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeSettings()">Cancel</button>
+      <button class="btn-primary" onclick="saveSettings()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- CAMERA MODAL -->
+<div id="camera-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="cam-title">
+  <div class="modal-box camera-box">
+    <div class="modal-header">
+      <h2 id="cam-title">?? Visual Analysis</h2>
+      <div class="cam-live-badge" id="cam-live-badge"><span class="dot-live"></span> LIVE</div>
+      <button class="close-btn" onclick="closeCameraModal()" aria-label="Close camera">?</button>
+    </div>
+    <video id="cam-video" autoplay playsinline muted></video>
+    <canvas id="cam-canvas" style="display:none"></canvas>
+    <div id="cam-preview" class="cam-preview-box" style="display:none">
+      <img id="cam-snapshot" alt="Captured frame" />
+      <button class="cam-discard" onclick="discardSnapshot()">? Discard</button>
+    </div>
+    <div class="cam-controls">
+      <button class="btn-primary" id="cam-capture-btn" onclick="captureFrame()">?? Capture Frame</button>
+      <div class="cam-ask-row">
+        <input type="text" id="cam-question" placeholder="Ask about this image… (optional)" />
+        <button class="btn-secondary" id="cam-ask-btn" onclick="askAboutFrame()" disabled>Ask ?</button>
+      </div>
+    </div>
+    <p class="hint cam-hint">Captured frames are only sent to AI when you click "Ask ?".</p>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast hidden" role="alert" aria-live="assertive"></div>
+
+<!-- MIC ACTIVE INDICATOR -->
+<div id="mic-indicator" class="mic-indicator hidden">
+  <span class="dot-live"></span> Listening…
+</div>
+
+<!-- MAIN SHELL -->
+<div id="app-shell" class="hidden">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-orb">
+        <div class="orb-ring r1"></div>
+        <div class="orb-ring r2"></div>
+        <div class="orb-core"></div>
+      </div>
+      <span id="sidebar-name" class="logo-name">JARVIS</span>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-btn active" id="nav-chat" onclick="switchView('chat')" aria-label="Chat">
+        <span class="nav-icon">??</span><span class="nav-label">Chat</span>
+      </button>
+      <button class="nav-btn" id="nav-memory" onclick="switchView('memory')" aria-label="Memory">
+        <span class="nav-icon">??</span><span class="nav-label">Memory</span>
+      </button>
+      <button class="nav-btn" id="nav-usage" onclick="switchView('usage')" aria-label="Usage">
+        <span class="nav-icon">??</span><span class="nav-label">Usage</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="status-indicators">
+        <div class="status-chip" id="net-chip">
+          <span class="dot" id="net-dot"></span>
+          <span id="net-label">Online</span>
+        </div>
+        <div class="status-chip" id="ai-chip">
+          <span class="dot dot-ai" id="ai-dot"></span>
+          <span id="ai-label">Cloud</span>
+        </div>
+      </div>
+      <button class="icon-btn" onclick="openSettings()" title="Settings" aria-label="Open settings">?</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <!-- CHAT VIEW -->
+    <section class="view active" id="view-chat">
+      <header class="chat-header">
+        <div class="chat-header-left">
+          <button class="icon-btn sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle sidebar">?</button>
+          <div class="assistant-info">
+            <div class="assistant-avatar-sm" id="av-sm">
+              <div class="av-ring"></div>
+              <div class="av-core" id="av-core-state"></div>
+            </div>
+            <div>
+              <span id="chat-assistant-name" class="assistant-name">JARVIS</span>
+              <span id="assistant-state-label" class="state-badge state-idle">Ready</span>
+            </div>
+          </div>
+        </div>
+        <div class="chat-header-right">
+          <div class="token-pill" id="token-pill" title="Token usage this period">
+            <span class="token-icon">?</span>
+            <span id="token-display">0 / 10K</span>
+          </div>
+          <button class="icon-btn" onclick="newChat()" title="New chat" aria-label="New chat">?</button>
+        </div>
+      </header>
+
+      <div class="messages-container" id="messages" role="log" aria-live="polite" aria-label="Chat messages"></div>
+
+      <div id="pending-img-bar" class="pending-img-bar hidden">
+        <img id="pending-img-thumb" alt="Pending frame" />
+        <span>Frame attached</span>
+        <button onclick="clearPendingImage()" aria-label="Remove image">?</button>
+      </div>
+
+      <div class="input-area">
+        <div class="input-toolbar">
+          <button class="tool-btn" id="cam-toggle-btn" onclick="toggleCamera()" title="Toggle camera" aria-label="Camera">
+            ??
+          </button>
+          <span id="cam-active-badge" class="cam-badge hidden"><span class="dot-live"></span> Camera On</span>
+          <span id="voice-active-badge" class="voice-badge hidden"><span class="dot-live-red"></span> Recording</span>
+        </div>
+        <div class="input-row">
+          <textarea
+            id="chat-input"
+            rows="1"
+            placeholder="Message JARVIS…"
+            aria-label="Chat message"
+            onkeydown="handleInputKey(event)"
+            oninput="autoResize(this)"
+          ></textarea>
+          <button class="mic-btn" id="mic-btn" onclick="toggleMic()" aria-label="Toggle microphone" title="Voice input">
+            <svg id="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          </button>
+          <button class="send-btn" id="send-btn" onclick="sendMessage()" aria-label="Send message">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+        <div class="input-meta">
+          <span id="mic-status" class="hint"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- MEMORY VIEW -->
+    <section class="view" id="view-memory">
+      <header class="view-header">
+        <div>
+          <h2>?? Memory</h2>
+          <p class="hint">Stored locally on this device. You control everything here.</p>
+        </div>
+        <button class="btn-danger" onclick="clearAllMemory()">Clear All</button>
+      </header>
+      <div class="memory-grid" id="memory-grid">
+        <div class="empty-state">No memories yet. Start a conversation and I'll remember what matters.</div>
+      </div>
+    </section>
+
+    <!-- USAGE VIEW -->
+    <section class="view" id="view-usage">
+      <header class="view-header"><div><h2>?? Usage Dashboard</h2><p class="hint">Track your AI token consumption and costs.</p></div></header>
+      <div class="usage-view-content" id="usage-view-content"></div>
+    </section>
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
