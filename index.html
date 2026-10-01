@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+ï»¿<!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JARVIS — Personal AI Assistant</title>
+  <title>JARVIS â€” Personal AI Assistant</title>
   <meta name="description" content="A privacy-first personal AI assistant with voice, vision, memory, and offline capabilities." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -26,7 +26,7 @@
 
     <!-- Step 1 -->
     <div class="ob-steps" id="ob-step-1">
-      <h3>Step 1 of 3 — Choose AI Provider</h3>
+      <h3>Step 1 of 3 â€” Choose AI Provider</h3>
       <p>JARVIS works with cloud AI (you supply an API key) or a local Ollama instance.</p>
       <div class="provider-grid">
         <button class="provider-btn active" id="prov-openai" onclick="selectProvider('openai')">
@@ -35,12 +35,18 @@
         <button class="provider-btn" id="prov-gemini" onclick="selectProvider('gemini')">
           <span class="prov-icon">?</span>Gemini<small>1.5-flash / pro</small>
         </button>
+        <button class="provider-btn" id="prov-openrouter" onclick="selectProvider('openrouter')">
+          <span class="prov-icon">ðŸ”€</span>OpenRouter<small>100+ models Â· Free tier</small>
+        </button>
+        <button class="provider-btn" id="prov-groq" onclick="selectProvider('groq')">
+          <span class="prov-icon">âš¡</span>Groq<small>llama3 Â· Ultra-fast Â· Free</small>
+        </button>
         <button class="provider-btn" id="prov-ollama" onclick="selectProvider('ollama')">
-          <span class="prov-icon">??</span>Local Ollama<small>Free · Fully Private</small>
+          <span class="prov-icon">??</span>Local Ollama<small>Free Â· Fully Private</small>
         </button>
       </div>
       <div id="api-key-block" class="input-group mt-16">
-        <label for="ob-api-key">API Key <span class="badge badge-warn">Session only — not saved to disk</span></label>
+        <label for="ob-api-key">API Key <span class="badge badge-warn">Session only â€” not saved to disk</span></label>
         <input type="password" id="ob-api-key" placeholder="sk-..." autocomplete="off" spellcheck="false" />
         <small class="hint">Cleared when you close this tab.</small>
       </div>
@@ -56,7 +62,7 @@
 
     <!-- Step 2 -->
     <div class="ob-steps hidden" id="ob-step-2">
-      <h3>Step 2 of 3 — Personalize</h3>
+      <h3>Step 2 of 3 â€” Personalize</h3>
       <div class="input-group">
         <label for="ob-user-name">Your Name</label>
         <input type="text" id="ob-user-name" placeholder="e.g. Tony" maxlength="32" />
@@ -70,7 +76,7 @@
 
     <!-- Step 3 -->
     <div class="ob-steps hidden" id="ob-step-3">
-      <h3>Step 3 of 3 — Permissions &amp; Privacy</h3>
+      <h3>Step 3 of 3 â€” Permissions &amp; Privacy</h3>
       <div class="perm-list">
         <div class="perm-item">
           <span class="perm-icon">??</span>
@@ -139,7 +145,7 @@
     <!-- Voice Tab -->
     <div class="tab-panel" id="panel-voice">
       <div class="setting-row"><label>Voice</label><select id="s-voice-name"></select></div>
-      <div class="setting-row"><label>Speed <span id="s-rate-val">1.0</span>×</label>
+      <div class="setting-row"><label>Speed <span id="s-rate-val">1.0</span>Ã—</label>
         <input type="range" id="s-rate" min="0.5" max="2" step="0.1" value="1" oninput="document.getElementById('s-rate-val').textContent=parseFloat(this.value).toFixed(1)" /></div>
       <div class="setting-row"><label>Volume <span id="s-vol-val">80</span>%</label>
         <input type="range" id="s-volume" min="0" max="100" step="5" value="80" oninput="document.getElementById('s-vol-val').textContent=this.value" /></div>
@@ -164,17 +170,19 @@
         <select id="s-provider" onchange="updateProviderUI()">
           <option value="openai">OpenAI</option>
           <option value="gemini">Google Gemini</option>
+          <option value="openrouter">OpenRouter (100+ models)</option>
+          <option value="groq">Groq (llama3 Â· Free)</option>
           <option value="ollama">Local Ollama</option>
         </select>
       </div>
       <div id="s-key-block" class="setting-row">
         <label>API Key <span class="badge badge-warn">Session only</span></label>
-        <input type="password" id="s-api-key" autocomplete="off" placeholder="Paste key here…" />
+        <input type="password" id="s-api-key" autocomplete="off" placeholder="Paste key hereâ€¦" />
       </div>
       <div id="s-model-block" class="setting-row"><label>Model</label>
         <select id="s-model">
-          <option value="gpt-4o-mini">gpt-4o-mini (Fast · Cheap)</option>
-          <option value="gpt-4o">gpt-4o (Smart · Moderate cost)</option>
+          <option value="gpt-4o-mini">gpt-4o-mini (Fast Â· Cheap)</option>
+          <option value="gpt-4o">gpt-4o (Smart Â· Moderate cost)</option>
           <option value="gemini-1.5-flash">gemini-1.5-flash</option>
           <option value="gemini-1.5-pro">gemini-1.5-pro</option>
         </select>
@@ -246,7 +254,7 @@
     <div class="cam-controls">
       <button class="btn-primary" id="cam-capture-btn" onclick="captureFrame()">?? Capture Frame</button>
       <div class="cam-ask-row">
-        <input type="text" id="cam-question" placeholder="Ask about this image… (optional)" />
+        <input type="text" id="cam-question" placeholder="Ask about this imageâ€¦ (optional)" />
         <button class="btn-secondary" id="cam-ask-btn" onclick="askAboutFrame()" disabled>Ask ?</button>
       </div>
     </div>
@@ -259,7 +267,7 @@
 
 <!-- MIC ACTIVE INDICATOR -->
 <div id="mic-indicator" class="mic-indicator hidden">
-  <span class="dot-live"></span> Listening…
+  <span class="dot-live"></span> Listeningâ€¦
 </div>
 
 <!-- MAIN SHELL -->
@@ -345,7 +353,7 @@
           <textarea
             id="chat-input"
             rows="1"
-            placeholder="Message JARVIS…"
+            placeholder="Message JARVISâ€¦"
             aria-label="Chat message"
             onkeydown="handleInputKey(event)"
             oninput="autoResize(this)"
@@ -388,6 +396,9 @@
   </main>
 </div>
 
+<script src="config.js" onerror="console.info('config.js not found - enter API key in settings')"></script>
 <script src="app.js"></script>
 </body>
 </html>
+
+

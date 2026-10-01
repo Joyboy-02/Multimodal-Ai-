@@ -1,13 +1,13 @@
-/* ══════════════════════════════════════════════════════════════════
-   JARVIS — Personal AI Assistant  |  app.js
-   Phase 1: Chat · Voice · Camera · Memory · Token Tracking
+﻿/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   JARVIS â€” Personal AI Assistant  |  app.js
+   Phase 1: Chat Â· Voice Â· Camera Â· Memory Â· Token Tracking
    Privacy: API keys in sessionStorage only. No telemetry.
-══════════════════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 "use strict";
 
-/* ══════  STATE  ══════ */
+/* â•â•â•â•â•â•  STATE  â•â•â•â•â•â• */
 const State = {
-  provider:"openai", model:"gpt-4o-mini", ollamaUrl:"http://localhost:11434",
+  provider:"openrouter", model:"gpt-4o-mini", ollamaUrl:"http://localhost:11434",
   ollamaModel:"llama3", userName:"User", assistantName:"JARVIS",
   lang:"en-US", voiceName:"", speechRate:1, speechVolume:0.8,
   autoSpeak:false, responseStyle:"concise", memoryEnabled:true,
@@ -18,7 +18,7 @@ const State = {
   synth:window.speechSynthesis, utterance:null, isThinking:false, apiKey:"",
 };
 
-/* ══════  INIT  ══════ */
+/* â•â•â•â•â•â•  INIT  â•â•â•â•â•â• */
 function init() {
   loadSettings(); loadMemories(); loadTokenState();
   populateVoices(); monitorNetwork();
@@ -30,7 +30,7 @@ function init() {
   window.addEventListener("offline", updateNetworkStatus);
 }
 
-/* ══════  SETTINGS  ══════ */
+/* â•â•â•â•â•â•  SETTINGS  â•â•â•â•â•â• */
 function loadSettings() {
   const s = JSON.parse(localStorage.getItem("j_settings") || "{}");
   Object.assign(State, {
@@ -96,7 +96,7 @@ function saveSettings() {
   toast("Settings saved", "success");
 }
 
-/* ══════  TOKEN TRACKING  ══════ */
+/* â•â•â•â•â•â•  TOKEN TRACKING  â•â•â•â•â•â• */
 function loadTokenState() {
   const ts = JSON.parse(localStorage.getItem("j_tokens") || "{}");
   State.tokensUsed   = ts.used       || 0;
@@ -132,7 +132,7 @@ function checkTokenWarnings() {
 }
 function isOverBudget() { return State.tokensUsed >= State.tokenBudget; }
 
-/* ══════  MEMORY  ══════ */
+/* â•â•â•â•â•â•  MEMORY  â•â•â•â•â•â• */
 function loadMemories() {
   State.memories = JSON.parse(localStorage.getItem("j_memories") || "[]");
 }
@@ -177,7 +177,7 @@ function renderMemoryView() {
       <div class="memory-card-text">${escHtml(m.text)}</div>
       <div class="memory-card-meta">
         <span>${relTime(m.ts)}</span>
-        <button class="memory-card-del" onclick="deleteMemory('${m.id}')" aria-label="Delete">🗑</button>
+        <button class="memory-card-del" onclick="deleteMemory('${m.id}')" aria-label="Delete">ðŸ—‘</button>
       </div>
     </div>`).join("");
 }
@@ -190,18 +190,20 @@ function renderSettingsMemory() {
         <div class="memory-item-content">[${escHtml(m.type)}] ${escHtml(m.text)}</div>
         <div class="memory-item-meta">${relTime(m.ts)}</div>
       </div>
-      <button class="memory-item-del" onclick="deleteMemory('${m.id}')" aria-label="Delete">✕</button>
+      <button class="memory-item-del" onclick="deleteMemory('${m.id}')" aria-label="Delete">âœ•</button>
     </div>`).join("");
 }
 
-/* ══════  AI CALL  ══════ */
+/* â•â•â•â•â•â•  AI CALL  â•â•â•â•â•â• */
 async function callAI(messages) {
   if (State.localOnly && State.provider !== "ollama")
     return "[LOCAL-ONLY MODE] Cloud AI is disabled. Enable Ollama or disable local-only mode in Settings > Privacy.";
   if (isOverBudget() && State.provider !== "ollama")
     return `[BUDGET EXCEEDED] You've used ${fmtNum(State.tokensUsed)} / ${fmtNum(State.tokenBudget)} tokens this ${State.budgetPeriod}. Increase your budget in Settings > AI & Keys.`;
   try {
-    if (State.provider === "ollama")  return await callOllama(messages);
+    if (State.provider === "openrouter") return await callOpenRouter(messages);
+    if (State.provider === "groq")       return await callGroq(messages);
+    if (State.provider === "ollama")     return await callOllama(messages);
     if (State.provider === "openai")  return await callOpenAI(messages);
     if (State.provider === "gemini")  return await callGemini(messages);
   } catch(err) { throw err; }
@@ -245,7 +247,47 @@ async function callGemini(messages) {
   return text;
 }
 
-async function callOllama(messages) {
+
+async function callOpenRouter(messages) {
+  const key = State.apiKey || sessionStorage.getItem("j_api_key");
+  if (!key) throw new Error("No OpenRouter API key. Go to Settings > AI & Keys.");
+  const model = State.model || "openai/gpt-4o-mini";
+  const apiMessages = messages.map(m => {
+    if (m.role === "user" && m.imageData)
+      return { role:"user", content:[{type:"text",text:m.content},{type:"image_url",image_url:{url:m.imageData}}] };
+    return { role:m.role, content:m.content };
+  });
+  const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":"Bearer "+key,
+      "HTTP-Referer":"https://github.com/Joyboy-02/Multimodal-Ai-",
+      "X-Title":"JARVIS Personal AI"
+    },
+    body:JSON.stringify({ model, messages:apiMessages, max_tokens:1024 }),
+  });
+  if (!resp.ok) { const e=await resp.json().catch(()=>({})); throw new Error(e.error?.message||"OpenRouter error "+resp.status); }
+  const data = await resp.json();
+  if (data.usage) addTokens(data.usage.prompt_tokens + data.usage.completion_tokens);
+  return data.choices[0].message.content;
+}
+
+async function callGroq(messages) {
+  const key = sessionStorage.getItem("j_groq_key") || State.apiKey;
+  if (!key) throw new Error("No Groq API key. Go to Settings > AI & Keys.");
+  const model = State.model || "llama3-8b-8192";
+  const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
+    body:JSON.stringify({ model, messages:messages.map(m=>({role:m.role,content:m.content})), max_tokens:1024 }),
+  });
+  if (!resp.ok) { const e=await resp.json().catch(()=>({})); throw new Error(e.error?.message||"Groq error "+resp.status); }
+  const data = await resp.json();
+  if (data.usage) addTokens(data.usage.prompt_tokens + data.usage.completion_tokens);
+  return data.choices[0].message.content;
+}
+ {
   const resp = await fetch(`${State.ollamaUrl}/api/chat`,{
     method:"POST", headers:{"Content-Type":"application/json"},
     body:JSON.stringify({ model:State.ollamaModel, messages:messages.map(m=>({role:m.role,content:m.content})), stream:false }),
@@ -266,7 +308,7 @@ Be natural, polite and helpful. If you don't know something, say so. Never fabri
 Current date: ${new Date().toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}.`;
 }
 
-/* ══════  SEND MESSAGE  ══════ */
+/* â•â•â•â•â•â•  SEND MESSAGE  â•â•â•â•â•â• */
 async function sendMessage() {
   const input = eid("chat-input");
   const text  = input.value.trim();
@@ -300,7 +342,7 @@ function autoSummarizeMemory() {
   if (userText.length > 20) saveMemory("Conversation", State.userName+" discussed: "+userText.slice(0,120)+"...");
 }
 
-/* ══════  CHAT RENDERING  ══════ */
+/* â•â•â•â•â•â•  CHAT RENDERING  â•â•â•â•â•â• */
 function appendMessage(msg) {
   const container = eid("messages");
   const div = document.createElement("div");
@@ -353,11 +395,11 @@ function renderMarkdown(text) {
 function newChat() {
   if (State.messages.length>0 && !confirm("Start a new chat? Current conversation will be cleared.")) return;
   State.messages = []; eid("messages").innerHTML = "";
-  appendSystemMsg("New session started · "+State.assistantName+" ready");
+  appendSystemMsg("New session started Â· "+State.assistantName+" ready");
   toast("New chat started","success");
 }
 
-/* ══════  ASSISTANT STATE  ══════ */
+/* â•â•â•â•â•â•  ASSISTANT STATE  â•â•â•â•â•â• */
 function setAssistantState(state) {
   State.isThinking = state==="thinking";
   const core=eid("av-core-state"), label=eid("assistant-state-label");
@@ -368,7 +410,7 @@ function setAssistantState(state) {
   label.textContent=lbls[state]||"Ready"; label.className="state-badge "+(cls[state]||"state-idle");
 }
 
-/* ══════  VOICE — STT  ══════ */
+/* â•â•â•â•â•â•  VOICE â€” STT  â•â•â•â•â•â• */
 function toggleMic() {
   if (!State.allowMic) { toast("Microphone disabled. Enable in Settings > Privacy.","warn"); return; }
   if (State.micActive) stopMic(); else startMic();
@@ -414,7 +456,7 @@ function stopMic() {
   setAssistantState("idle");
 }
 
-/* ══════  VOICE — TTS  ══════ */
+/* â•â•â•â•â•â•  VOICE â€” TTS  â•â•â•â•â•â• */
 function speak(text) {
   if (!State.synth) return;
   State.synth.cancel();
@@ -434,7 +476,7 @@ function populateVoices() {
     voices.map(v=>`<option value="${escHtml(v.name)}"${v.name===State.voiceName?" selected":""}>${escHtml(v.name)} (${v.lang})</option>`).join("");
 }
 
-/* ══════  CAMERA  ══════ */
+/* â•â•â•â•â•â•  CAMERA  â•â•â•â•â•â• */
 function toggleCamera() {
   if (!State.allowCam) { toast("Camera disabled. Enable in Settings > Privacy.","warn"); return; }
   if (State.camActive) closeCameraModal(); else openCameraModal();
@@ -480,13 +522,18 @@ function clearPendingImage() {
   const t=eid("pending-img-thumb"); if(t) t.src="";
 }
 
-/* ══════  ONBOARDING  ══════ */
+/* â•â•â•â•â•â•  ONBOARDING  â•â•â•â•â•â• */
 function selectProvider(p) {
   State.provider=p;
   document.querySelectorAll(".provider-btn").forEach(b=>b.classList.remove("active"));
-  eid("prov-"+p).classList.add("active");
+  const btn=eid("prov-"+p); if(btn) btn.classList.add("active");
   eid("api-key-block").style.display = p==="ollama"?"none":"";
   eid("ollama-block").style.display  = p==="ollama"?"":"none";
+  // Pre-fill key from session for known providers
+  const keyEl=eid("ob-api-key"); if(!keyEl) return;
+  if (p==="groq") keyEl.value=sessionStorage.getItem("j_groq_key")||"";
+  else if (p==="openrouter"||p==="openai") keyEl.value=sessionStorage.getItem("j_api_key")||"";
+  else keyEl.value="";
 }
 function obNext(step) {
   if (step===1) {
@@ -518,12 +565,12 @@ function hideOnboarding() {
   eid("app-shell").classList.remove("hidden");
   loadSettings(); updateAssistantName(); renderMemoryView(); renderUsageDashboard();
   populateVoices(); if (!State.periodStart) State.periodStart=new Date(); updateTokenDisplay();
-  appendSystemMsg(State.assistantName+" initialized · "+getTimeGreeting());
+  appendSystemMsg(State.assistantName+" initialized Â· "+getTimeGreeting());
   const w={role:"assistant",content:getTimeGreeting()+", "+State.userName+"! I'm "+State.assistantName+", your personal AI assistant. How can I help you today?",ts:new Date().toISOString()};
   appendMessage(w); State.messages.push(w);
 }
 
-/* ══════  SETTINGS MODAL  ══════ */
+/* â•â•â•â•â•â•  SETTINGS MODAL  â•â•â•â•â•â• */
 function openSettings() {
   eid("s-user-name").value      = State.userName;
   eid("s-assistant-name").value = State.assistantName;
@@ -564,10 +611,10 @@ function updateProviderUI() {
   eid("s-ollama-block").style.display = p==="ollama"?"":"none";
   const m=eid("s-model");
   if (p==="gemini") m.innerHTML='<option value="gemini-1.5-flash">gemini-1.5-flash (Fast)</option><option value="gemini-1.5-pro">gemini-1.5-pro (Smart)</option>';
-  else m.innerHTML='<option value="gpt-4o-mini">gpt-4o-mini (Fast · Cheap)</option><option value="gpt-4o">gpt-4o (Smart · Moderate)</option>';
+  else m.innerHTML='<option value="gpt-4o-mini">gpt-4o-mini (Fast Â· Cheap)</option><option value="gpt-4o">gpt-4o (Smart Â· Moderate)</option>';
 }
 
-/* ══════  USAGE DASHBOARD  ══════ */
+/* â•â•â•â•â•â•  USAGE DASHBOARD  â•â•â•â•â•â• */
 function renderUsageDashboard() {
   const used=State.tokensUsed, budget=State.tokenBudget;
   const pct=Math.min(100,Math.round(used/budget*100));
@@ -641,7 +688,7 @@ function exportUsageReport() {
   toast("Report exported","success");
 }
 
-/* ══════  VIEWS + SIDEBAR  ══════ */
+/* â•â•â•â•â•â•  VIEWS + SIDEBAR  â•â•â•â•â•â• */
 function switchView(name) {
   document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
   document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
@@ -651,7 +698,7 @@ function switchView(name) {
 }
 function toggleSidebar() { eid("sidebar").classList.toggle("collapsed"); }
 
-/* ══════  NETWORK  ══════ */
+/* â•â•â•â•â•â•  NETWORK  â•â•â•â•â•â• */
 function monitorNetwork() { updateNetworkStatus(); }
 function updateNetworkStatus() {
   const online=navigator.onLine;
@@ -666,21 +713,21 @@ function updateAiLabel() {
   lbl.textContent=local?"Local":"Cloud";
 }
 
-/* ══════  THEME  ══════ */
+/* â•â•â•â•â•â•  THEME  â•â•â•â•â•â• */
 function applyTheme(t) { document.documentElement.setAttribute("data-theme",t); State.theme=t; }
 
-/* ══════  ASSISTANT NAME  ══════ */
+/* â•â•â•â•â•â•  ASSISTANT NAME  â•â•â•â•â•â• */
 function updateAssistantName() {
   const n=State.assistantName||"JARVIS";
   ["sidebar-name","chat-assistant-name"].forEach(id=>{const el=eid(id);if(el)el.textContent=n;});
-  document.title=n+" — Personal AI Assistant";
+  document.title=n+" â€” Personal AI Assistant";
 }
 
-/* ══════  INPUT HELPERS  ══════ */
+/* â•â•â•â•â•â•  INPUT HELPERS  â•â•â•â•â•â• */
 function handleInputKey(e) { if (e.key==="Enter"&&!e.shiftKey) { e.preventDefault(); sendMessage(); } }
 function autoResize(el) { el.style.height="auto"; el.style.height=Math.min(el.scrollHeight,140)+"px"; }
 
-/* ══════  TOAST  ══════ */
+/* â•â•â•â•â•â•  TOAST  â•â•â•â•â•â• */
 let _toastTimer;
 function toast(msg, type="") {
   const el=eid("toast"); if (!el) return;
@@ -688,7 +735,7 @@ function toast(msg, type="") {
   clearTimeout(_toastTimer); _toastTimer=setTimeout(()=>el.classList.add("hidden"),3500);
 }
 
-/* ══════  UTILS  ══════ */
+/* â•â•â•â•â•â•  UTILS  â•â•â•â•â•â• */
 function eid(id)         { return document.getElementById(id); }
 function uid()           { return Math.random().toString(36).slice(2,9); }
 function escHtml(s)      { return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
@@ -707,5 +754,7 @@ function downloadText(name, text, mime) {
   a.href=URL.createObjectURL(new Blob([text],{type:mime})); a.download=name; a.click();
 }
 
-/* ══════  START  ══════ */
+/* â•â•â•â•â•â•  START  â•â•â•â•â•â• */
 document.addEventListener("DOMContentLoaded", init);
+
+

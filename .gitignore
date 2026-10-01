@@ -20,3 +20,7 @@ desktop.ini
 # Build
 dist/
 build/
+
+# Local API key config - NEVER commit this
+config.js
+config.local.js
